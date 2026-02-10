@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VANT AI</title>
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="glass-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>VANT AI</h2>
+            </div>
+            <div class="upload-section">
+                <h3>Upload Document</h3>
+                <p>Upload a PDF or Text file to begin</p>
+                <input type="file" id="fileInput" accept=".pdf,.txt,.docx" hidden>
+                <label for="fileInput" class="custom-file-upload">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose File
+                </label>
+                <div id="uploadStatus" class="status-box"></div>
+            </div>
+            <div class="sidebar-footer">
+                <p><i class="fas fa-shield-alt"></i> Private & Modern</p>
+                <small>Groq + HuggingFace RAG</small>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <header class="chat-header">
+                <div class="header-info">
+                    <h1>AI Assistant</h1>
+                    <span class="status-indicator">Online</span>
+                </div>
+                <button id="clearChat" class="btn-clear"><i class="fas fa-trash-alt"></i> Clear</button>
+            </header>
+
+            <div id="chatContainer" class="chat-container">
+                <div class="message assistant">
+                    <div class="content">
+                        Hello! I am your private AI. Please upload a document in the sidebar, and I will help you
+                        analyze it.
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="userInput" placeholder="Ask about your document..." rows="1"></textarea>
+                    <button id="sendBtn" class="btn-send"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/static/script.js?v=1.2"></script>
+</body>
+
+</html>
