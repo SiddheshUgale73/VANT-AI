@@ -1,11 +1,11 @@
 # VANT AI - Private RAG Chatbot
 
-VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) application that allows you to chat with your local documents (PDF, DOCX, TXT) privately and securely.
+VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) application that allows you to chat with your local documents (PDF, DOCX, TXT, CSV, XLSX) privately and securely.
 
 ## 🚀 Features
 
 - **Private & Local**: Your data never leaves your machine.
-- **Multi-Format Support**: Process PDF, Microsoft Word (`.docx`), and Plain Text (`.txt`) files.
+- **Multi-Format Support**: Process PDF, Microsoft Word (`.docx`), Plain Text (`.txt`), CSV (`.csv`), and Excel (`.xlsx`) files.
 - **Glassmorphic UI**: A premium, modern interface with a dark tech aesthetic.
 - **Fast Indexing**: Uses HuggingFace embeddings for efficient document retrieval.
 - **Citations**: Automatically shows sources for every answer.

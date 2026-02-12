@@ -4,12 +4,33 @@ const sendBtn = document.getElementById('sendBtn');
 const fileInput = document.getElementById('fileInput');
 const uploadStatus = document.getElementById('uploadStatus');
 const clearChat = document.getElementById('clearChat');
+const docList = document.getElementById('docList');
 
-
+// Auto-expand textarea
 userInput.addEventListener('input', () => {
     userInput.style.height = 'auto';
     userInput.style.height = (userInput.scrollHeight) + 'px';
 });
+
+// Load Indexed Documents
+async function loadDocuments() {
+    try {
+        const response = await fetch('/documents');
+        const data = await response.json();
+        docList.innerHTML = '';
+        if (data.documents && data.documents.length > 0) {
+            data.documents.forEach(doc => {
+                const li = document.createElement('li');
+                li.innerHTML = `<i class="fas fa-file-lines"></i> <span>${doc}</span>`;
+                docList.appendChild(li);
+            });
+        } else {
+            docList.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center; padding: 1rem;">No files added yet.</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load documents:', error);
+    }
+}
 
 // Handle File Upload
 fileInput.addEventListener('change', async () => {
@@ -20,7 +41,6 @@ fileInput.addEventListener('change', async () => {
     formData.append('file', file);
 
     uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    uploadStatus.className = 'status-box status-success';
 
     try {
         const response = await fetch('/process', {
@@ -30,15 +50,14 @@ fileInput.addEventListener('change', async () => {
         const data = await response.json();
 
         if (data.status === 'success') {
-            uploadStatus.textContent = data.message;
-            addMessage('assistant', marked.parse(`Great! I've indexed **${file.name}**. What would you like to know?`));
+            uploadStatus.innerHTML = `<i class="fas fa-check-circle"></i> Indexed.`;
+            addMessage('assistant', marked.parse(`**${file.name}** added.`));
+            loadDocuments();
         } else {
-            uploadStatus.textContent = data.message;
-            uploadStatus.className = 'status-box status-error';
+            uploadStatus.innerHTML = `<span style="color: #ff4d4d; font-size: 0.75rem;">Error: ${data.message}</span>`;
         }
     } catch (error) {
-        uploadStatus.textContent = 'Upload failed';
-        uploadStatus.className = 'status-box status-error';
+        uploadStatus.textContent = 'Upload failed.';
     }
 });
 
@@ -47,15 +66,13 @@ async function sendMessage() {
     const message = userInput.value.trim();
     if (!message) return;
 
-    // Reset input
     userInput.value = '';
     userInput.style.height = 'auto';
 
     addMessage('user', message);
 
-    // AI thinking indicator
     const thinkingId = 'thinking-' + Date.now();
-    addMessage('assistant', '<i class="fas fa-circle-notch fa-spin"></i> Thinking...', thinkingId);
+    addMessage('assistant', '<div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>', thinkingId);
 
     try {
         const formData = new FormData();
@@ -67,31 +84,28 @@ async function sendMessage() {
         });
         const data = await response.json();
 
-        // Replace thinking with actual response
         const thinkingMsg = document.getElementById(thinkingId);
         if (data.status === 'success') {
             thinkingMsg.innerHTML = marked.parse(data.response);
 
-            // Add citations if available
             if (data.sources && data.sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
                 sourcesDiv.className = 'sources-container';
-                sourcesDiv.innerHTML = '<span class="sources-label">Sources:</span>';
-
                 data.sources.forEach(source => {
                     const badge = document.createElement('span');
                     badge.className = 'source-badge';
                     badge.textContent = source;
                     sourcesDiv.appendChild(badge);
                 });
-
                 thinkingMsg.appendChild(sourcesDiv);
             }
+            saveChat();
         } else {
-            thinkingMsg.innerHTML = 'Sorry, I encountered an error: ' + data.message;
+            thinkingMsg.innerHTML = 'Sorry, I encountered an issue while processing your request.';
         }
     } catch (error) {
-        document.getElementById(thinkingId).innerHTML = 'Sorry, the connection failed.';
+        const msg = document.getElementById(thinkingId);
+        if (msg) msg.innerHTML = 'The connection to VANT AI failed.';
     }
 }
 
@@ -118,8 +132,27 @@ function addMessage(role, content, id = null) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// Persist Chat History
+function saveChat() {
+    localStorage.setItem('vant_vibrant_chat', chatContainer.innerHTML);
+}
+
+function loadChat() {
+    const history = localStorage.getItem('vant_vibrant_chat');
+    if (history) {
+        chatContainer.innerHTML = history;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
+
 // Clear Chat
 clearChat.addEventListener('click', () => {
-    chatContainer.innerHTML = '';
-    addMessage('assistant', 'Chat history cleared. How can I help you?');
+    if (confirm('Clear?')) {
+        chatContainer.innerHTML = '';
+        localStorage.removeItem('vant_vibrant_chat');
+    }
 });
+
+// Initialization
+loadDocuments();
+loadChat();

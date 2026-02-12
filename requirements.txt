@@ -11,3 +11,5 @@ langchain-groq
 langchain-huggingface
 sentence-transformers
 docx2txt
+pandas
+openpyxl

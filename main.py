@@ -7,45 +7,45 @@ import os
 import shutil
 import tempfile
 from typing import List
-from dotenv import load_dotenv
+from config import HOST, PORT, DEBUG, GROQ_API_KEY
 
-# Load environment variables
-load_dotenv()
+if not GROQ_API_KEY:
+    print("WARNING: GROQ_API_KEY not found. Please check your .env file.")
 
-if not os.getenv("GROQ_API_KEY"):
-    print("WARNING: GROQ_API_KEY not found in environment variables or .env file.")
-
-app = FastAPI()
+app = FastAPI(debug=DEBUG)
 
 # Mount static files
-static_dir = os.path.join(os.getcwd(), "static")
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Global state for RAG engine and history
-# In a real app, this should be session-based or handled via a database
+# Initialize RAG engine
 rag_engine = RAGEngine()
-history = []
+history: List = []
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     with open("static/index.html", "r") as f:
         return f.read()
 
+@app.get("/documents")
+async def list_docs():
+    """List all indexed documents."""
+    return JSONResponse(content={"documents": rag_engine.list_documents()})
+
 @app.post("/process")
 async def process_document(file: UploadFile = File(...)):
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
             shutil.copyfileobj(file.file, tmp_file)
             tmp_path = tmp_file.name
         
         try:
             rag_engine.process_document(tmp_path)
-            # Clear history when a new document is processed
-            global history
-            history = []
-            return JSONResponse(content={"status": "success", "message": f"{file.filename} processed and indexed."})
+            # We don't clear history anymore to allow cross-document conversation
+            return JSONResponse(content={
+                "status": "success", 
+                "message": f"{file.filename} added to VANT AI database."
+            })
         except Exception as e:
             return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
         finally:
@@ -57,14 +57,18 @@ async def process_document(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(message: str = Form(...)):
     try:
+        global history
         result = rag_engine.query(message, history)
         response = result["answer"]
         sources = result["sources"]
         
-        # Update history
         history.append(HumanMessage(content=message))
         history.append(AIMessage(content=response))
         
+        # Keep history manageable (last 10 interactions)
+        if len(history) > 20: 
+            history = history[-20:]
+            
         return JSONResponse(content={
             "status": "success", 
             "response": response,
@@ -75,4 +79,5 @@ async def chat(message: str = Form(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=9000)
+    print(f"Starting VANT AI on http://{HOST}:{PORT}")
+    uvicorn.run(app, host=HOST, port=PORT)
