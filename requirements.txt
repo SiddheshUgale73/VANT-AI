@@ -13,3 +13,4 @@ sentence-transformers
 docx2txt
 pandas
 openpyxl
+rank_bm25

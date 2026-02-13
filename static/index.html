@@ -7,43 +7,70 @@
     <title>VANT AI | Intelligent RAG</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 </head>
 
 <body>
-    <aside class="sidebar">
-        <div class="logo">
-            <h1>VANT AI</h1>
-        </div>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>VANT AI</h1>
+            </div>
 
-        <div class="upload-card">
-            <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.csv,.xlsx" hidden>
-            <label for="fileInput" class="custom-file-upload">
-                <i class="fas fa-plus"></i>
-                <span>Add Data</span>
-            </label>
-        </div>
-        <div id="uploadStatus" class="status-box"></div>
-        <ul id="docList" class="doc-list"></ul>
+            <div class="upload-area">
+                <input type="file" id="fileInput" accept=".pdf,.txt,.docx,.csv,.xlsx" hidden>
+                <label for="fileInput" class="upload-card">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Data</span>
+                </label>
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
 
-        <button id="clearChat" class="icon-btn" style="margin-top: auto; opacity: 0.5;">
-            <i class="fas fa-eraser"></i> Clear
-        </button>
-    </aside>
+            <div class="sidebar-content">
+                <ul id="docList">
+                    <p class="empty-msg">No files added yet.</p>
+                </ul>
+            </div>
 
-    <main class="main-content">
-        <div id="chatContainer"></div>
-
-        <div class="input-area">
-            <div class="input-container">
-                <textarea id="userInput" placeholder="Ask anything..." rows="1"></textarea>
-                <button id="sendBtn" class="icon-btn send-btn">
-                    <i class="fas fa-arrow-up"></i>
+            <div class="sidebar-footer">
+                <button id="clearChat" class="clear-btn">
+                    <i class="fas fa-broom"></i>
+                    <span>Clear</span>
                 </button>
             </div>
-        </div>
-    </main>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-chat">
+            <header class="chat-header" style="display: none;">
+                <!-- Model Badge (Hidden to match screenshot) -->
+                <span id="activeModelBadge"></span>
+            </header>
+
+            <div id="chatContainer" class="chat-container">
+                <!-- Welcome screen or messages -->
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea id="userInput" placeholder="Ask anything..." rows="1"></textarea>
+                    <button id="sendBtn" class="send-btn">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hidden Logic Elements -->
+    <ul id="sessionList" style="display: none;"></ul>
+    <select id="modelSelect" style="display: none;"></select>
+    <button id="newChatBtn" style="display: none;"></button>
+    <button id="micBtn" style="display: none;"></button>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="/static/script.js"></script>
 </body>
 

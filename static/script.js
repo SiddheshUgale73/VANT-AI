@@ -5,6 +5,114 @@ const fileInput = document.getElementById('fileInput');
 const uploadStatus = document.getElementById('uploadStatus');
 const clearChat = document.getElementById('clearChat');
 const docList = document.getElementById('docList');
+const sessionList = document.getElementById('sessionList');
+const newChatBtn = document.getElementById('newChatBtn');
+const activeModelBadge = document.getElementById('activeModelBadge');
+const modelSelect = document.getElementById('modelSelect');
+const micBtn = document.getElementById('micBtn');
+
+let currentSessionId = null;
+let isRecording = false;
+
+// Voice Search (Web Speech API)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.innerHTML = '<i class="fas fa-microphone-lines fa-beat"></i>';
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        micBtn.classList.remove('recording');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        isRecording = false;
+    };
+
+    recognition.onerror = () => {
+        micBtn.classList.remove('recording');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        isRecording = false;
+    };
+
+    recognition.onend = () => {
+        micBtn.classList.remove('recording');
+        micBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+        isRecording = false;
+    };
+
+    micBtn.onclick = () => {
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            recognition.start();
+        }
+    };
+} else {
+    micBtn.style.display = 'none';
+}
+
+// Configure marked with highlight.js
+marked.setOptions({
+    highlight: function (code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+        }
+        return hljs.highlightAuto(code).value;
+    },
+    breaks: true,
+    gfm: true
+});
+
+// Model Management
+async function loadModels() {
+    try {
+        const response = await fetch('/models');
+        const data = await response.json();
+        modelSelect.innerHTML = '';
+        data.models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            modelSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load models:', error);
+    }
+}
+
+modelSelect.addEventListener('change', async () => {
+    const modelId = modelSelect.value;
+    const modelName = modelSelect.options[modelSelect.selectedIndex].text;
+
+    try {
+        const formData = new FormData();
+        formData.append('model_id', modelId);
+        const response = await fetch('/models/change', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            activeModelBadge.textContent = modelName;
+        }
+    } catch (error) {
+        console.error('Model change failed:', error);
+    }
+});
+
+// Initial Load
+document.addEventListener('DOMContentLoaded', () => {
+    loadModels();
+    loadDocuments();
+    loadSessions();
+});
 
 // Load Indexed Documents
 async function loadDocuments() {
@@ -17,18 +125,145 @@ async function loadDocuments() {
                 const li = document.createElement('li');
                 li.innerHTML = `
                     <i class="fas fa-file-lines"></i> 
-                    <span title="${doc}">${doc}</span>
+                    <span title="${doc}" onclick="showSummary('${doc}', this)">${doc}</span>
                     <button class="delete-doc" onclick="deleteDocument('${doc}')">
                         <i class="fas fa-trash-can"></i>
                     </button>
+                    <div class="doc-summary" id="summary-${btoa(doc).replace(/=/g, '')}"></div>
                 `;
                 docList.appendChild(li);
             });
         } else {
-            docList.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center; padding: 1rem;">No files added yet.</p>';
+            docList.innerHTML = '<p class="empty-msg">No files added yet.</p>';
         }
     } catch (error) {
         console.error('Failed to load documents:', error);
+    }
+}
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/sessions');
+        const data = await response.json();
+        sessionList.innerHTML = '';
+
+        data.sessions.forEach(session => {
+            const li = document.createElement('li');
+            li.className = `session-item ${session.id === currentSessionId ? 'active' : ''}`;
+            li.innerHTML = `
+                <i class="fas fa-message"></i>
+                <span class="session-title" onclick="switchSession('${session.id}')">${session.title}</span>
+                <i class="fas fa-trash-can delete-session" onclick="deleteSession(event, '${session.id}')"></i>
+            `;
+            sessionList.appendChild(li);
+        });
+
+        // If no active session, create one
+        if (!currentSessionId && data.sessions.length > 0) {
+            switchSession(data.sessions[0].id);
+        } else if (data.sessions.length === 0) {
+            createNewSession();
+        }
+    } catch (error) {
+        console.error('Failed to load sessions:', error);
+    }
+}
+
+async function createNewSession() {
+    try {
+        const response = await fetch('/sessions', { method: 'POST' });
+        const data = await response.json();
+        if (data.status === 'success') {
+            currentSessionId = data.session_id;
+            loadSessions();
+            chatContainer.innerHTML = `
+                <div class="welcome-screen">
+                    <p style="text-align: center; color: #6b7280; margin-top: 10rem;">Ask anything...</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Failed to create session:', error);
+    }
+}
+
+async function switchSession(id) {
+    if (currentSessionId === id) return;
+    currentSessionId = id;
+
+    // Update active state in UI
+    document.querySelectorAll('.session-item').forEach(item => {
+        item.classList.toggle('active', item.querySelector('.session-title').getAttribute('onclick') === `switchSession('${id}')`);
+    });
+
+    chatContainer.innerHTML = '<div class="thinking-wrapper"><div class="thinking-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+
+    try {
+        const response = await fetch(`/sessions/${id}/history`);
+        const data = await response.json();
+
+        chatContainer.innerHTML = '';
+        if (data.messages.length === 0) {
+            chatContainer.innerHTML = `
+                <div class="welcome-screen">
+                    <p style="text-align: center; color: #6b7280; margin-top: 10rem;">Ask anything...</p>
+                </div>
+            `;
+        } else {
+            data.messages.forEach(msg => {
+                const content = msg.role === 'assistant' ? marked.parse(msg.content) : msg.content;
+                addMessage(msg.role, content);
+            });
+        }
+    } catch (error) {
+        chatContainer.innerHTML = '<div class="error-msg">Failed to load chat history.</div>';
+    }
+}
+
+async function deleteSession(event, id) {
+    event.stopPropagation();
+    if (!confirm('Delete this conversation?')) return;
+
+    try {
+        const response = await fetch(`/sessions/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.status === 'success') {
+            if (currentSessionId === id) currentSessionId = null;
+            loadSessions();
+        }
+    } catch (error) {
+        alert('Failed to delete session.');
+    }
+}
+
+newChatBtn.onclick = createNewSession;
+
+async function showSummary(filename, element) {
+    const summaryId = `summary-${btoa(filename).replace(/=/g, '')}`;
+    const summaryDiv = document.getElementById(summaryId);
+
+    if (summaryDiv.style.display === 'block') {
+        summaryDiv.style.display = 'none';
+        return;
+    }
+
+    if (summaryDiv.innerHTML === '') {
+        summaryDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Summarizing...';
+        summaryDiv.style.display = 'block';
+
+        try {
+            const response = await fetch(`/summarize/${encodeURIComponent(filename)}`);
+            const data = await response.json();
+            if (data.status === 'success') {
+                summaryDiv.innerHTML = marked.parse(data.summary);
+            } else {
+                summaryDiv.innerHTML = 'Failed to generate summary.';
+            }
+        } catch (error) {
+            summaryDiv.innerHTML = 'Error connecting to server.';
+        }
+    } else {
+        summaryDiv.style.display = 'block';
     }
 }
 
@@ -122,6 +357,7 @@ async function sendMessage() {
     try {
         const formData = new FormData();
         formData.append('message', message);
+        formData.append('session_id', currentSessionId);
 
         const response = await fetch('/chat', {
             method: 'POST',
@@ -146,7 +382,8 @@ async function sendMessage() {
                 });
                 contentDiv.appendChild(sourcesDiv);
             }
-            saveChat();
+            // Title might have changed, reload sessions
+            loadSessions();
         } else {
             contentDiv.innerHTML = `<span style="color: #ff4d4d;">Error: ${data.message || 'Processing failed'}</span>`;
         }
@@ -179,27 +416,9 @@ function addMessage(role, content, id = null) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Persist Chat History
-function saveChat() {
-    localStorage.setItem('vant_vibrant_chat', chatContainer.innerHTML);
-}
-
-function loadChat() {
-    const history = localStorage.getItem('vant_vibrant_chat');
-    if (history) {
-        chatContainer.innerHTML = history;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-}
-
 // Clear Chat
 clearChat.addEventListener('click', () => {
-    if (confirm('Clear chat history?')) {
-        chatContainer.innerHTML = '';
-        localStorage.removeItem('vant_vibrant_chat');
+    if (confirm('Clear current conversation?')) {
+        createNewSession();
     }
 });
-
-// Initialization
-loadDocuments();
-loadChat();

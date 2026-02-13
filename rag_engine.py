@@ -9,7 +9,38 @@ import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain_community.retrievers import BM25Retriever
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from typing import List, Optional
 from config import GROQ_API_KEY, DEFAULT_MODEL, DB_DIR, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
+
+class HybridRetriever(BaseRetriever):
+    vector_retriever: BaseRetriever
+    bm25_retriever: Optional[BaseRetriever]
+    
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        # Get semantic results
+        vector_docs = self.vector_retriever.invoke(query, config={"callbacks": run_manager.get_child()})
+        
+        if not self.bm25_retriever:
+            return vector_docs
+            
+        # Get keyword results
+        bm25_docs = self.bm25_retriever.invoke(query, config={"callbacks": run_manager.get_child()})
+        
+        # Merge and de-duplicate based on content
+        all_docs = vector_docs + bm25_docs
+        seen_content = set()
+        unique_docs = []
+        for doc in all_docs:
+            if doc.page_content not in seen_content:
+                unique_docs.append(doc)
+                seen_content.add(doc.page_content)
+        
+        return unique_docs
 
 class RAGEngine:
     def __init__(self):
@@ -32,8 +63,24 @@ class RAGEngine:
             groq_api_key=GROQ_API_KEY
         )
         
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.bm25_retriever = None
+        self._initialize_bm25()
         self._create_rag_chain()
+
+    def _initialize_bm25(self):
+        """Build BM25 retriever from all documents in vectorstore."""
+        data = self.vectorstore.get()
+        if data and 'documents' in data and data['documents']:
+            # LangChain BM25 expects a list of Document objects
+            docs = []
+            for i in range(len(data['documents'])):
+                docs.append(Document(
+                    page_content=data['documents'][i],
+                    metadata=data['metadatas'][i]
+                ))
+            self.bm25_retriever = BM25Retriever.from_documents(docs)
+            self.bm25_retriever.k = 5
 
     def change_model(self, model_name: str):
         """Switch the underlying LLM model."""
@@ -83,8 +130,9 @@ class RAGEngine:
         # Add to existing vectorstore instead of recreating
         self.vectorstore.add_documents(documents=splits)
         
-        # Re-initialize retriever and chain to include new documents
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        # Re-initialize retrievers and chain
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self._initialize_bm25()
         self._create_rag_chain()
 
     def delete_document(self, filename: str):
@@ -97,8 +145,9 @@ class RAGEngine:
         if data and 'ids' in data and data['ids']:
             self.vectorstore.delete(ids=data['ids'])
             
-        # Re-initialize retriever and chain
-        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        # Re-initialize retrievers and chain
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self._initialize_bm25()
         self._create_rag_chain()
         return True
 
@@ -118,8 +167,41 @@ class RAGEngine:
                 sources.add(meta['source'])
         return sorted(list(sources))
 
+    def summarize_document(self, filename: str):
+        """Generate a 3-bullet summary for a specific document."""
+        if not self.vectorstore:
+            return "No documents indexed."
+            
+        # Get chunks for this document
+        data = self.vectorstore.get(where={"source": filename})
+        if not data or 'documents' not in data or not data['documents']:
+            return "Document content not found."
+            
+        # Combine a reasonable amount of text for summarization (e.g., first 5000 chars)
+        content = "\n".join(data['documents'])
+        limited_content = content[:10000] # Safe limit for context window
+        
+        prompt = (
+            f"Please provide a concise 3-bullet point summary of the following document content. "
+            f"Focus on the main topics and key takeaways.\n\n"
+            f"Content:\n{limited_content}"
+        )
+        
+        try:
+            response = self.llm.invoke(prompt)
+            # Ensure it's in markdown list format
+            return response.content
+        except Exception as e:
+            return f"Summarization Error: {str(e)}"
+
     def _create_rag_chain(self):
-        """Setup conversational RAG flow."""
+        """Setup conversational RAG flow with Hybrid Search (Manual Merge)."""
+        # Initialize our custom hybrid retriever
+        retriever = HybridRetriever(
+            vector_retriever=self.vector_retriever,
+            bm25_retriever=self.bm25_retriever
+        )
+
         contextualize_q_system_prompt = (
             "Given a chat history and the latest user question "
             "which might reference context in the chat history, "
@@ -135,7 +217,7 @@ class RAGEngine:
         ])
         
         history_aware_retriever = create_history_aware_retriever(
-            self.llm, self.retriever, contextualize_q_prompt
+            self.llm, retriever, contextualize_q_prompt
         )
 
         system_prompt = (
