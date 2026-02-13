@@ -6,12 +6,6 @@ const uploadStatus = document.getElementById('uploadStatus');
 const clearChat = document.getElementById('clearChat');
 const docList = document.getElementById('docList');
 
-// Auto-expand textarea
-userInput.addEventListener('input', () => {
-    userInput.style.height = 'auto';
-    userInput.style.height = (userInput.scrollHeight) + 'px';
-});
-
 // Load Indexed Documents
 async function loadDocuments() {
     try {
@@ -21,7 +15,13 @@ async function loadDocuments() {
         if (data.documents && data.documents.length > 0) {
             data.documents.forEach(doc => {
                 const li = document.createElement('li');
-                li.innerHTML = `<i class="fas fa-file-lines"></i> <span>${doc}</span>`;
+                li.innerHTML = `
+                    <i class="fas fa-file-lines"></i> 
+                    <span title="${doc}">${doc}</span>
+                    <button class="delete-doc" onclick="deleteDocument('${doc}')">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
+                `;
                 docList.appendChild(li);
             });
         } else {
@@ -32,11 +32,44 @@ async function loadDocuments() {
     }
 }
 
-// Handle File Upload
-fileInput.addEventListener('change', async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+async function deleteDocument(filename) {
+    if (!confirm(`Remove ${filename} from VANT AI?`)) return;
 
+    try {
+        const response = await fetch(`/documents/${encodeURIComponent(filename)}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            loadDocuments();
+            addMessage('assistant', `**${filename}** has been removed from the database.`);
+        }
+    } catch (error) {
+        console.error('Delete failed:', error);
+    }
+}
+
+const uploadCard = document.querySelector('.upload-card');
+
+uploadCard.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadCard.classList.add('drag-over');
+});
+
+uploadCard.addEventListener('dragleave', () => {
+    uploadCard.classList.remove('drag-over');
+});
+
+uploadCard.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadCard.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        handleFileUpload(file);
+    }
+});
+
+async function handleFileUpload(file) {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -51,7 +84,7 @@ fileInput.addEventListener('change', async () => {
 
         if (data.status === 'success') {
             uploadStatus.innerHTML = `<i class="fas fa-check-circle"></i> Indexed.`;
-            addMessage('assistant', marked.parse(`**${file.name}** added.`));
+            addMessage('assistant', marked.parse(`**${file.name}** added to the knowledge base.`));
             loadDocuments();
         } else {
             uploadStatus.innerHTML = `<span style="color: #ff4d4d; font-size: 0.75rem;">Error: ${data.message}</span>`;
@@ -59,6 +92,12 @@ fileInput.addEventListener('change', async () => {
     } catch (error) {
         uploadStatus.textContent = 'Upload failed.';
     }
+}
+
+// Handle File Upload via Input
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) handleFileUpload(file);
 });
 
 // Handle Sending Messages
@@ -72,7 +111,13 @@ async function sendMessage() {
     addMessage('user', message);
 
     const thinkingId = 'thinking-' + Date.now();
-    addMessage('assistant', '<div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>', thinkingId);
+    addMessage('assistant', `
+        <div class="thinking-wrapper">
+            <div class="thinking-dots">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+        </div>
+    `, thinkingId);
 
     try {
         const formData = new FormData();
@@ -85,8 +130,10 @@ async function sendMessage() {
         const data = await response.json();
 
         const thinkingMsg = document.getElementById(thinkingId);
+        const contentDiv = thinkingMsg.querySelector('.content');
+
         if (data.status === 'success') {
-            thinkingMsg.innerHTML = marked.parse(data.response);
+            contentDiv.innerHTML = marked.parse(data.response);
 
             if (data.sources && data.sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
@@ -97,15 +144,15 @@ async function sendMessage() {
                     badge.textContent = source;
                     sourcesDiv.appendChild(badge);
                 });
-                thinkingMsg.appendChild(sourcesDiv);
+                contentDiv.appendChild(sourcesDiv);
             }
             saveChat();
         } else {
-            thinkingMsg.innerHTML = 'Sorry, I encountered an issue while processing your request.';
+            contentDiv.innerHTML = `<span style="color: #ff4d4d;">Error: ${data.message || 'Processing failed'}</span>`;
         }
     } catch (error) {
         const msg = document.getElementById(thinkingId);
-        if (msg) msg.innerHTML = 'The connection to VANT AI failed.';
+        if (msg) msg.querySelector('.content').innerHTML = 'The connection to VANT AI failed.';
     }
 }
 
@@ -147,7 +194,7 @@ function loadChat() {
 
 // Clear Chat
 clearChat.addEventListener('click', () => {
-    if (confirm('Clear?')) {
+    if (confirm('Clear chat history?')) {
         chatContainer.innerHTML = '';
         localStorage.removeItem('vant_vibrant_chat');
     }

@@ -35,6 +35,16 @@ class RAGEngine:
         self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
         self._create_rag_chain()
 
+    def change_model(self, model_name: str):
+        """Switch the underlying LLM model."""
+        self.llm = ChatGroq(
+            model_name=model_name,
+            temperature=0,
+            groq_api_key=GROQ_API_KEY
+        )
+        self._create_rag_chain()
+        return True
+
     def process_document(self, file_path: str):
         """Load, split, and add document to persistent ChromaDB index."""
         ext = file_path.lower()
@@ -76,6 +86,21 @@ class RAGEngine:
         # Re-initialize retriever and chain to include new documents
         self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
         self._create_rag_chain()
+
+    def delete_document(self, filename: str):
+        """Remove all embeddings for a specific document from ChromaDB."""
+        if not self.vectorstore:
+            return
+            
+        # Find all IDs associated with this source
+        data = self.vectorstore.get(where={"source": filename})
+        if data and 'ids' in data and data['ids']:
+            self.vectorstore.delete(ids=data['ids'])
+            
+        # Re-initialize retriever and chain
+        self.retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self._create_rag_chain()
+        return True
 
     def list_documents(self):
         """Return a list of unique document names currently in the index."""

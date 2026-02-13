@@ -7,7 +7,7 @@ import os
 import shutil
 import tempfile
 from typing import List
-from config import HOST, PORT, DEBUG, GROQ_API_KEY
+from config import HOST, PORT, DEBUG, GROQ_API_KEY, AVAILABLE_MODELS
 
 if not GROQ_API_KEY:
     print("WARNING: GROQ_API_KEY not found. Please check your .env file.")
@@ -25,6 +25,20 @@ history: List = []
 async def read_root():
     with open("static/index.html", "r") as f:
         return f.read()
+
+@app.get("/models")
+async def get_models():
+    """List available LLM models."""
+    return JSONResponse(content={"models": AVAILABLE_MODELS})
+
+@app.post("/models/change")
+async def change_model(model_id: str = Form(...)):
+    """Switch the current LLM model."""
+    try:
+        rag_engine.change_model(model_id)
+        return JSONResponse(content={"status": "success", "message": f"Model switched to {model_id}"})
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 @app.get("/documents")
 async def list_docs():
@@ -47,10 +61,19 @@ async def process_document(file: UploadFile = File(...)):
                 "message": f"{file.filename} added to VANT AI database."
             })
         except Exception as e:
+            print(f"PROCESS ERROR: {e}")
             return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+
+@app.delete("/documents/{filename}")
+async def delete_document(filename: str):
+    try:
+        rag_engine.delete_document(filename)
+        return JSONResponse(content={"status": "success", "message": f"{filename} removed."})
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
