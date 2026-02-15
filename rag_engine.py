@@ -51,7 +51,7 @@ class RAGEngine:
         )
         
         # Load or create persistent vector store
-        self.vectorstore = Chroma(
+        self.vectorstore = Chr0oma(
             persist_directory=DB_DIR,
             embedding_function=self.embeddings
         )
