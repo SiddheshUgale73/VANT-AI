@@ -1,0 +1,5 @@
+__pycache__
+chat_history.db
+vector_db
+.env
+.git
