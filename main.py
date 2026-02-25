@@ -1,18 +1,25 @@
-from fastapi import FastAPI, UploadFile, File, Form, Depends
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from rag_engine import RAGEngine
 from langchain_core.messages import HumanMessage, AIMessage
 import os
 import shutil
-import tempfile
-from typing import List
+import logging
+from typing import List, Optional
 from config import HOST, PORT, DEBUG, GROQ_API_KEY, AVAILABLE_MODELS
 import session_db
 from sqlalchemy.orm import Session
 
+# Configure Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("VANT-AI")
+
 if not GROQ_API_KEY:
-    print("WARNING: GROQ_API_KEY not found. Please check your .env file.")
+    logger.warning("GROQ_API_KEY not found. Please check your .env file.")
 
 # Initialize SQLite DB
 session_db.init_db()
@@ -24,6 +31,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Initialize RAG engine
 rag_engine = RAGEngine()
+
+# --- Routes ---
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -76,27 +86,27 @@ async def list_docs():
 
 @app.post("/process")
 async def process_document(file: UploadFile = File(...)):
+    """Upload and process a document for RAG."""
+    temp_path = f"temp_{file.filename}"
     try:
-        suffix = os.path.splitext(file.filename)[1]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
-            shutil.copyfileobj(file.file, tmp_file)
-            tmp_path = tmp_file.name
-        
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
         try:
-            rag_engine.process_document(tmp_path)
-            # We don't clear history anymore to allow cross-document conversation
+            rag_engine.process_document(temp_path)
+            logger.info(f"Successfully processed document: {file.filename}")
             return JSONResponse(content={
                 "status": "success", 
                 "message": f"{file.filename} added to VANT AI database."
             })
         except Exception as e:
-            print(f"PROCESS ERROR: {e}")
+            logger.error(f"PROCESS ERROR for {file.filename}: {e}", exc_info=True)
             return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
         finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
     except Exception as e:
-        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+        logger.error(f"FILE UPLOAD ERROR for {file.filename}: {e}", exc_info=True)
+        return JSONResponse(content={"status": "error", "message": f"Failed to upload file: {str(e)}"}, status_code=500)
 
 @app.get("/summarize/{filename}")
 async def summarize_document(filename: str):
@@ -157,10 +167,10 @@ async def chat(message: str = Form(...), session_id: str = Form(...), db: Sessio
             "sources": sources
         })
     except Exception as e:
-        print(f"CHAT ERROR: {e}")
+        logger.error(f"CHAT ERROR in session {session_id}: {e}", exc_info=True)
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"Starting VANT AI on http://{HOST}:{PORT}")
+    logger.info(f"Starting VANT AI on http://{HOST}:{PORT}")
     uvicorn.run(app, host=HOST, port=PORT)

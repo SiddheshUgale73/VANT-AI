@@ -4,20 +4,20 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader, CSVLoader
-from langchain_core.documents import Document
-import pandas as pd
+from langchain_core.documents import Document 
+import pandas as pd 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from typing import List, Optional
+from typing import List, Optional 
 from config import GROQ_API_KEY, DEFAULT_MODEL, DB_DIR, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
 
 class HybridRetriever(BaseRetriever):
     vector_retriever: BaseRetriever
-    bm25_retriever: Optional[BaseRetriever]
+    bm25_retriever: Optional[BaseRetriever] = None
     
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -31,7 +31,7 @@ class HybridRetriever(BaseRetriever):
         # Get keyword results
         bm25_docs = self.bm25_retriever.invoke(query, config={"callbacks": run_manager.get_child()})
         
-        # Merge and de-duplicate based on content
+        # Merge and de-duplicate based on content hash or content itself
         all_docs = vector_docs + bm25_docs
         seen_content = set()
         unique_docs = []
@@ -51,7 +51,7 @@ class RAGEngine:
         )
         
         # Load or create persistent vector store
-        self.vectorstore = Chr0oma(
+        self.vectorstore = Chroma(
             persist_directory=DB_DIR,
             embedding_function=self.embeddings
         )
@@ -97,25 +97,27 @@ class RAGEngine:
         ext = file_path.lower()
         if ext.endswith('.pdf'):
             loader = PyPDFLoader(file_path)
+            docs = loader.load()
         elif ext.endswith('.docx'):
             loader = Docx2txtLoader(file_path)
+            docs = loader.load()
         elif ext.endswith('.csv'):
             loader = CSVLoader(file_path)
+            docs = loader.load()
         elif ext.endswith('.xlsx'):
-            # Use pandas directly for better reliability than Unstructured
-            loader = None
             try:
                 df_dict = pd.read_excel(file_path, sheet_name=None)
                 docs = []
                 for sheet_name, df in df_dict.items():
                     content = df.to_string(index=False)
-                    docs.append(Document(page_content=content, metadata={"source": os.path.basename(file_path), "sheet": sheet_name}))
+                    docs.append(Document(
+                        page_content=content, 
+                        metadata={"source": os.path.basename(file_path), "sheet": sheet_name}
+                    ))
             except Exception as e:
                 raise Exception(f"Excel Load Error: {str(e)}")
         else:
             loader = TextLoader(file_path)
-        
-        if loader:
             docs = loader.load()
         # Add metadata about the source
         for doc in docs:

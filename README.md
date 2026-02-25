@@ -16,7 +16,7 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 - **LLM Engine**: Groq (Llama models)
 - **RAG Framework**: LangChain
 - **Embeddings**: HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`)
-- **Vector Store**: FAISS
+- **Vector Store**: ChromaDB
 - **Frontend**: Vanilla HTML5, CSS3 (Custom Glassmorphism), JavaScript (ES6)
 
 ## 📋 Prerequisites
@@ -60,6 +60,35 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 2. **Access the application**:
    Open your browser and navigate to:
    [http://127.0.0.1:9000](http://127.0.0.1:9000)
+
+## 🐳 Running with Docker
+
+1. **Build the image**:
+   ```bash
+   docker build -t vant-ai .
+   ```
+
+2. **Run the container**:
+   ```bash
+   docker run -p 8000:8000 --env-file .env vant-ai
+   ```
+
+## ☁️ Cloud Deployment
+
+VANT AI can be deployed to any platform that supports Docker.
+
+### 1. Render / Railway
+- Connect your GitHub repository.
+- **Root Directory**: `./`
+- **Runtime**: `Docker`
+- **Environment Variables**: Add `GROQ_API_KEY`.
+- **Persistence**: Add a "Disk" mount at `/app/vector_db` and `/app/chat_history.db` to keep your documents and chat logs between restarts.
+
+### 2. Hugging Face Spaces
+- Create a new Space.
+- Select `Docker` as the SDK.
+- Upload your files or sync with GitHub.
+- Add `GROQ_API_KEY` to the Space's Secrets.
 
 ## 📖 Usage
 

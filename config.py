@@ -1,3 +1,6 @@
+"""
+Configuration settings for VANT AI.
+"""
 import os
 from dotenv import load_dotenv
 
@@ -5,6 +8,7 @@ load_dotenv()
 
 # API Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 # AI Models
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 AVAILABLE_MODELS = [
@@ -24,3 +28,4 @@ CHUNK_OVERLAP = 50
 HOST = "127.0.0.1"
 PORT = 9000
 DEBUG = True
+

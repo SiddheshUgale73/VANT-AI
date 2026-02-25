@@ -28,6 +28,10 @@
             </div>
 
             <div class="sidebar-content">
+                <h3 class="sidebar-label">Conversations</h3>
+                <ul id="sessionList"></ul>
+
+                <h3 class="sidebar-label" style="margin-top: 1.5rem;">Knowledge</h3>
                 <ul id="docList">
                     <p class="empty-msg">No files added yet.</p>
                 </ul>
@@ -43,9 +47,13 @@
 
         <!-- Main Workspace -->
         <main class="main-chat">
-            <header class="chat-header" style="display: none;">
-                <!-- Model Badge (Hidden to match screenshot) -->
-                <span id="activeModelBadge"></span>
+            <header class="chat-header">
+                <div class="header-left">
+                    <span id="activeModelBadge" class="status-badge">Loading...</span>
+                </div>
+                <div class="header-right">
+                    <select id="modelSelect" class="premium-select"></select>
+                </div>
             </header>
 
             <div id="chatContainer" class="chat-container">
@@ -65,7 +73,6 @@
 
     <!-- Hidden Logic Elements -->
     <ul id="sessionList" style="display: none;"></ul>
-    <select id="modelSelect" style="display: none;"></select>
     <button id="newChatBtn" style="display: none;"></button>
     <button id="micBtn" style="display: none;"></button>
 
