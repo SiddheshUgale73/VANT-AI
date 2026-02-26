@@ -1,28 +1,31 @@
-# VANT AI - Private RAG Chatbot
+# VANT AI - Premium Private RAG Chatbot
 
-VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) application that allows you to chat with your local documents (PDF, DOCX, TXT, CSV, XLSX) privately and securely.
+VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) application designed for privacy-conscious users. It allows you to chat with your local documents (PDF, DOCX, TXT, CSV, XLSX) using a sophisticated Hybrid Search engine and a premium glassmorphic interface.
 
-## 🚀 Features
+## 🚀 Key Features
 
-- **Private & Local**: Your data never leaves your machine.
-- **Multi-Format Support**: Process PDF, Microsoft Word (`.docx`), Plain Text (`.txt`), CSV (`.csv`), and Excel (`.xlsx`) files.
-- **Glassmorphic UI**: A premium, modern interface with a dark tech aesthetic.
-- **Fast Indexing**: Uses HuggingFace embeddings for efficient document retrieval.
-- **Citations**: Automatically shows sources for every answer.
+- **Hybrid Search Engine**: Combines **Semantic Search** (Vector-based) with **Keyword Search** (BM25) for unmatched retrieval accuracy.
+- **Persistent Chat Sessions**: Full session management with history saved in a local SQLite database.
+- **Dynamic Model Switching**: Switch between different Llama 3 models (via Groq) on the fly without restarting the server.
+- **Document Summarization**: Instantly generate 3-bullet summaries for any indexed document.
+- **High-Performance RAG**: Uses HuggingFace embeddings (`all-MiniLM-L6-v2`) and ChromaDB for fast, local indexing.
+- **Multi-Format Mastery**: Robust processing for PDF, Word, Text, CSV, and complex Excel files.
+- **Premium Glassmorphic UI**: High-end user experience with real-time markdown rendering and smooth animations.
 
 ## 🛠️ Tech Stack
 
 - **Backend**: FastAPI (Python)
-- **LLM Engine**: Groq (Llama models)
-- **RAG Framework**: LangChain
-- **Embeddings**: HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`)
-- **Vector Store**: ChromaDB
-- **Frontend**: Vanilla HTML5, CSS3 (Custom Glassmorphism), JavaScript (ES6)
+- **Database**: SQLite (SQLAlchemy) for sessions & ChromaDB for vectors
+- **Orchestration**: LangChain (Conversational RAG Chain)
+- **LLM Engine**: Groq (Llama-3 models)
+- **Retriever**: Hybrid (VectorStore + BM25)
+- **Frontend**: Vanilla HTML5/CSS3 (Glassmorphism), JavaScript (ES6)
 
 ## 📋 Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - A Groq API Key (Get it at [console.groq.com](https://console.groq.com/))
+- Docker (Optional, for containerized deployment)
 
 ## ⚙️ Installation & Setup
 
@@ -32,11 +35,13 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
    cd VANT-AI
    ```
 
-2. **Set up a Virtual Environment** (Optional but recommended):
+2. **Set up a Virtual Environment**:
    ```bash
    python -m venv venv
-   source venv/Scripts/activate  # Windows
-   # or source venv/bin/activate  # macOS/Linux
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
    ```
 
 3. **Install Dependencies**:
@@ -45,23 +50,25 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
    ```
 
 4. **Environment Configuration**:
-   Create a `.env` file in the root directory and add your Groq API Key:
+   Create a `.env` file in the root directory:
    ```env
-   GROQ_API_KEY=your_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
+   HOST=127.0.0.1
+   PORT=9000
+   DEBUG=True
    ```
 
-## 🏃 How to Run
+## 🏃 Running the App
 
-1. **Start the server**:
+1. **Start the FastAPI server**:
    ```bash
    python main.py
    ```
 
-2. **Access the application**:
-   Open your browser and navigate to:
-   [http://127.0.0.1:9000](http://127.0.0.1:9000)
+2. **Open your browser**:
+   Navigate to [http://127.0.0.1:9000](http://127.0.0.1:9000)
 
-## 🐳 Running with Docker
+## 🐳 Docker Deployment
 
 1. **Build the image**:
    ```bash
@@ -70,33 +77,17 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 
 2. **Run the container**:
    ```bash
-   docker run -p 8000:8000 --env-file .env vant-ai
+   docker run -p 9000:9000 --env-file .env vant-ai
    ```
 
-## ☁️ Cloud Deployment
+## 📖 How to Use
 
-VANT AI can be deployed to any platform that supports Docker.
+1. **Create a Session**: Click "New Chat" in the sidebar to start a fresh conversation.
+2. **Upload Docs**: Drag and drop or click to upload files. VANT AI will automatically index them.
+3. **Select Model**: Use the top-right selector to choose your preferred AI model.
+4. **Chat & Explore**: Ask questions. Use the "Summarize" button next to uploaded files for a quick overview.
+5. **Citations**: Hover over the source badges in AI responses to see the exact document referenced.
 
-### 1. Render / Railway
-- Connect your GitHub repository.
-- **Root Directory**: `./`
-- **Runtime**: `Docker`
-- **Environment Variables**: Add `GROQ_API_KEY`.
-- **Persistence**: Add a "Disk" mount at `/app/vector_db` and `/app/chat_history.db` to keep your documents and chat logs between restarts.
+## 🛡️ Privacy & Security
 
-### 2. Hugging Face Spaces
-- Create a new Space.
-- Select `Docker` as the SDK.
-- Upload your files or sync with GitHub.
-- Add `GROQ_API_KEY` to the Space's Secrets.
-
-## 📖 Usage
-
-1. **Upload**: Use the sidebar to upload a document.
-2. **Wait**: VANT AI will process and index the content.
-3. **Chat**: Ask any question about your document in the chat box.
-4. **Learn**: Hover over source badges to see where the information came from.
-
-## 🛡️ Privacy
-
-This project is built with privacy in mind. The `.env` file is ignored by Git to prevent API key leaks. Always ensure you do not commit your `.env` file to public repositories.
+VANT AI is built for privacy. Your documents are indexed locally, and only the specific relevant chunks (along with your prompt) are sent to Groq for processing. No data is stored permanently outside your local environment.
