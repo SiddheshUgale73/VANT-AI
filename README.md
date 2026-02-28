@@ -25,9 +25,61 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 
 - Python 3.9+
 - A Groq API Key (Get it at [console.groq.com](https://console.groq.com/))
-- A Groq API Key (Get it at [console.groq.com](https://console.groq.com/))
 
 ## ⚙️ Installation & Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/SiddheshUgale73/VANT-AI.git
+   cd VANT-AI
+   ```
+
+2. **Set up a Virtual Environment**:
+   ```bash
+   python -m venv venv
+   # Windows:
+   venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Environment Configuration**:
+   Create a `.env` file in the root directory:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   HOST=127.0.0.1
+   PORT=9000
+   DEBUG=True
+   ```
+
+## 🏃 Running the App
+
+1. **Start the FastAPI server**:
+   ```bash
+   python main.py
+   ```
+
+2. **Open your browser**:
+   Navigate to [http://127.0.0.1:9000](http://127.0.0.1:9000)
+
+## 📂 Project Structure
+
+```text
+VANT-AI/
+├── static/              # Frontend (HTML, CSS, JS)
+├── main.py              # FastAPI Backend Server
+├── rag_engine.py        # Core RAG Logic & Hybrid Search
+├── session_db.py        # SQLite Session Management
+├── config.py            # Global Settings & Models
+├── requirements.txt     # Python Dependencies
+├── .env                 # API Keys (Local Only)
+└── .gitignore           # Ignored files (DBs, logs, etc.)
+```
 
 ## 📖 How to Use
 
