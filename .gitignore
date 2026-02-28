@@ -9,3 +9,7 @@ venv/
 .venv/
 .vscode/
 .DS_Store
+
+# Databases
+chat_history.db
+vector_db/
