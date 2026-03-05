@@ -25,7 +25,7 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
 # Server Configuration
-HOST = os.getenv("HOST", "0.0.0.0")
+HOST = os.getenv("HOST", "127.0.0.1")
 PORT = int(os.getenv("PORT", 9000))
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 

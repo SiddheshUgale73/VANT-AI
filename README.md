@@ -61,7 +61,7 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 
 1. **Start the FastAPI server**:
    ```bash
-   python main.py
+   python app.py
    ```
 
 2. **Open your browser**:
@@ -72,7 +72,7 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 ```text
 VANT-AI/
 ├── static/              # Frontend (HTML, CSS, JS)
-├── main.py              # FastAPI Backend Server
+├── app.py              # FastAPI Backend Server
 ├── rag_engine.py        # Core RAG Logic & Hybrid Search
 ├── session_db.py        # SQLite Session Management
 ├── config.py            # Global Settings & Models
