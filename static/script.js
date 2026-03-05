@@ -82,6 +82,11 @@ async function loadModels() {
             option.textContent = model.name;
             modelSelect.appendChild(option);
         });
+
+        // Update badge with the first (default) model
+        if (data.models.length > 0) {
+            activeModelBadge.textContent = data.models[0].name;
+        }
     } catch (error) {
         console.error('Failed to load models:', error);
     }

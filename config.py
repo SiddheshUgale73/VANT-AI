@@ -15,7 +15,7 @@ AVAILABLE_MODELS = [
     {"name": "Llama 3.3 70B", "id": "llama-3.3-70b-versatile"},
     {"name": "Llama 3.1 8B", "id": "llama-3.1-8b-instant"},
     {"name": "Mixtral 8x7B", "id": "mixtral-8x7b-32768"},
-    {"name": "Gemma 2 9B", "id": "gemma2-9b-it"}
+    {"name": "Llama 3.2 3B", "id": "llama-3.2-3b-preview"}
 ]
 
 # RAG Configuration
@@ -25,7 +25,7 @@ CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
 # Server Configuration
-HOST = "127.0.0.1"
-PORT = 9000
-DEBUG = True
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 9000))
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 

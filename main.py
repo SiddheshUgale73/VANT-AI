@@ -37,8 +37,14 @@ rag_engine = RAGEngine()
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
+    """Serve the main UI."""
     with open("static/index.html", "r") as f:
         return f.read()
+
+@app.get("/health")
+async def health_check():
+    """Simple health check for Render."""
+    return {"status": "healthy"}
 
 @app.get("/models")
 async def get_models():

@@ -13,3 +13,5 @@ docx2txt
 pandas
 openpyxl
 rank_bm25
+gunicorn
+uvicorn
