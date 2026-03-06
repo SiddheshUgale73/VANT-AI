@@ -29,8 +29,21 @@ app = FastAPI(debug=DEBUG)
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Initialize RAG engine
-rag_engine = RAGEngine()
+# Initialize RAG engine (Lazy load)
+rag_engine: Optional[RAGEngine] = None
+
+@app.on_event("startup")
+async def startup_event():
+    global rag_engine
+    logger.info("Initializing RAG Engine...")
+    rag_engine = RAGEngine()
+    logger.info("RAG Engine ready.")
+
+# Helper to get rag engine
+def get_rag_engine():
+    if rag_engine is None:
+        raise HTTPException(status_code=503, detail="AI engine is still starting up...")
+    return rag_engine
 
 # --- Routes ---
 
@@ -55,8 +68,11 @@ async def get_models():
 async def change_model(model_id: str = Form(...)):
     """Switch the current LLM model."""
     try:
-        rag_engine.change_model(model_id)
+        engine = get_rag_engine()
+        engine.change_model(model_id)
         return JSONResponse(content={"status": "success", "message": f"Model switched to {model_id}"})
+    except HTTPException as e:
+        raise e
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
@@ -88,7 +104,8 @@ async def delete_session(session_id: str, db: Session = Depends(session_db.get_d
 @app.get("/documents")
 async def list_docs():
     """List all indexed documents."""
-    return JSONResponse(content={"documents": rag_engine.list_documents()})
+    engine = get_rag_engine()
+    return JSONResponse(content={"documents": engine.list_documents()})
 
 @app.post("/process")
 async def process_document(file: UploadFile = File(...)):
@@ -98,7 +115,8 @@ async def process_document(file: UploadFile = File(...)):
         with open(temp_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         try:
-            rag_engine.process_document(temp_path)
+            engine = get_rag_engine()
+            engine.process_document(temp_path)
             logger.info(f"Successfully processed document: {file.filename}")
             return JSONResponse(content={
                 "status": "success", 
@@ -117,7 +135,8 @@ async def process_document(file: UploadFile = File(...)):
 @app.get("/summarize/{filename}")
 async def summarize_document(filename: str):
     try:
-        summary = rag_engine.summarize_document(filename)
+        engine = get_rag_engine()
+        summary = engine.summarize_document(filename)
         return JSONResponse(content={"status": "success", "summary": summary})
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
@@ -125,7 +144,8 @@ async def summarize_document(filename: str):
 @app.delete("/documents/{filename}")
 async def delete_document(filename: str):
     try:
-        rag_engine.delete_document(filename)
+        engine = get_rag_engine()
+        engine.delete_document(filename)
         return JSONResponse(content={"status": "success", "message": f"{filename} removed."})
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
@@ -150,7 +170,8 @@ async def chat(message: str = Form(...), session_id: str = Form(...), db: Sessio
                 langchain_history.append(AIMessage(content=m.content))
         
         # 2. Query RAG Engine
-        result = rag_engine.query(message, langchain_history)
+        engine = get_rag_engine()
+        result = engine.query(message, langchain_history)
         response = result["answer"]
         sources = result["sources"]
         
