@@ -9,5 +9,7 @@ services:
         value: 0.0.0.0
       - key: DEBUG
         value: "False"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: GROQ_API_KEY
         sync: false # User needs to set this in Render UI
