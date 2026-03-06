@@ -34,10 +34,18 @@ rag_engine: Optional[RAGEngine] = None
 
 @app.on_event("startup")
 async def startup_event():
-    global rag_engine
-    logger.info("Initializing RAG Engine...")
-    rag_engine = RAGEngine()
-    logger.info("RAG Engine ready.")
+    import threading
+    def load_engine():
+        global rag_engine
+        try:
+            logger.info("Initializing RAG Engine in background...")
+            rag_engine = RAGEngine()
+            logger.info("RAG Engine ready.")
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG Engine: {e}")
+
+    # Run heavy initialization in a separate thread so the server starts instantly
+    threading.Thread(target=load_engine, daemon=True).start()
 
 # Helper to get rag engine
 def get_rag_engine():
