@@ -67,18 +67,47 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 2. **Open your browser**:
    Navigate to [http://127.0.0.1:9000](http://127.0.0.1:9000)
 
+## � Deployment
+
+### Render Deployment
+
+1. Create a Render account at [render.com](https://render.com).
+2. Connect your GitHub repository.
+3. Use the `render.yaml` configuration for automatic setup.
+4. Set the `GROQ_API_KEY` environment variable in Render's dashboard.
+
+### Heroku Deployment
+
+1. Create a Heroku account at [heroku.com](https://heroku.com).
+2. Install Heroku CLI.
+3. Deploy using the `Procfile`:
+   ```bash
+   heroku create your-app-name
+   git push heroku main
+   ```
+4. Set environment variables in Heroku dashboard.
+
 ## 📂 Project Structure
 
-```text
+```
 VANT-AI/
-├── static/              # Frontend (HTML, CSS, JS)
-├── app.py              # FastAPI Backend Server
+├── static/              # Frontend assets (HTML, CSS, JS)
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+├── vector_db/           # ChromaDB vector database
+├── __pycache__/         # Python cache files
+├── app.py               # FastAPI Backend Server
 ├── rag_engine.py        # Core RAG Logic & Hybrid Search
 ├── session_db.py        # SQLite Session Management
 ├── config.py            # Global Settings & Models
 ├── requirements.txt     # Python Dependencies
+├── render.yaml          # Render deployment configuration
+├── Procfile             # Heroku deployment configuration
 ├── .env                 # API Keys (Local Only)
-└── .gitignore           # Ignored files (DBs, logs, etc.)
+├── .gitignore           # Ignored files (DBs, logs, etc.)
+├── chat_history.db      # SQLite database for chat sessions
+└── README.md            # This file
 ```
 
 ## 📖 How to Use
@@ -92,3 +121,11 @@ VANT-AI/
 ## 🛡️ Privacy & Security
 
 VANT AI is built for privacy. Your documents are indexed locally, and only the specific relevant chunks (along with your prompt) are sent to Groq for processing. No data is stored permanently outside your local environment.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
