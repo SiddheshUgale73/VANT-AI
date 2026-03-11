@@ -109,18 +109,6 @@ VANT-AI/
 4. **Chat & Explore**: Ask questions. Use the "Summarize" button next to uploaded files for a quick overview.
 5. **Citations**: Hover over the source badges in AI responses to see the exact document referenced.
 
-## 🗺️ Future Roadmap
-
-VANT AI is evolving towards an enterprise-grade intelligence platform. Our upcoming phases include:
-
-### Phase 2: Snowflake Data Warehousing
-- **Enterprise Storage**: Migrating processed document metadata and interaction logs to **Snowflake**.
-- **Analytics at Scale**: Using Snowflake's compute power for large-scale document analysis across entire departments.
-
-### Phase 3: Power BI Visualization
-- **Insight Dashboards**: Connecting Snowflake to **Power BI** for high-level visual analytics.
-- **Trend Analysis**: Visualizing chat trends, common user queries, and document library coverage.
-
 ## 🔌 Integration Options
 
 You can integrate the VANT AI "Brain" into your existing websites:
