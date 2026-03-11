@@ -61,31 +61,23 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 
 1. **Start the FastAPI server**:
    ```bash
-   python app.py
+   python main.py
    ```
 
 2. **Open your browser**:
    Navigate to [http://127.0.0.1:9000](http://127.0.0.1:9000)
 
-## � Deployment
+## 🐳 Docker Deployment
 
-### Render Deployment
-
-1. Create a Render account at [render.com](https://render.com).
-2. Connect your GitHub repository.
-3. Use the `render.yaml` configuration for automatic setup.
-4. Set the `GROQ_API_KEY` environment variable in Render's dashboard.
-
-### Heroku Deployment
-
-1. Create a Heroku account at [heroku.com](https://heroku.com).
-2. Install Heroku CLI.
-3. Deploy using the `Procfile`:
+1. **Build the image**:
    ```bash
-   heroku create your-app-name
-   git push heroku main
+   docker build -t vant-ai .
    ```
-4. Set environment variables in Heroku dashboard.
+
+2. **Run the container**:
+   ```bash
+   docker run -p 9000:9000 --env-file .env vant-ai
+   ```
 
 ## 📂 Project Structure
 
@@ -96,8 +88,7 @@ VANT-AI/
 │   ├── style.css
 │   └── script.js
 ├── vector_db/           # ChromaDB vector database
-├── __pycache__/         # Python cache files
-├── app.py               # FastAPI Backend Server
+├── main.py              # FastAPI Backend Server (Core)
 ├── rag_engine.py        # Core RAG Logic & Hybrid Search
 ├── session_db.py        # SQLite Session Management
 ├── config.py            # Global Settings & Models
@@ -117,6 +108,25 @@ VANT-AI/
 3. **Select Model**: Use the top-right selector to choose your preferred AI model.
 4. **Chat & Explore**: Ask questions. Use the "Summarize" button next to uploaded files for a quick overview.
 5. **Citations**: Hover over the source badges in AI responses to see the exact document referenced.
+
+## 🗺️ Future Roadmap
+
+VANT AI is evolving towards an enterprise-grade intelligence platform. Our upcoming phases include:
+
+### Phase 2: Snowflake Data Warehousing
+- **Enterprise Storage**: Migrating processed document metadata and interaction logs to **Snowflake**.
+- **Analytics at Scale**: Using Snowflake's compute power for large-scale document analysis across entire departments.
+
+### Phase 3: Power BI Visualization
+- **Insight Dashboards**: Connecting Snowflake to **Power BI** for high-level visual analytics.
+- **Trend Analysis**: Visualizing chat trends, common user queries, and document library coverage.
+
+## 🔌 Integration Options
+
+You can integrate the VANT AI "Brain" into your existing websites:
+- **Widget Mode**: Inject a floating chat bubble via a simple JavaScript snippet.
+- **Headless API**: Use the FastAPI endpoints to build your own custom UI in React, Vue, or Next.js.
+- **Cross-Origin Ready**: CORS-enabled for seamless multi-domain deployments.
 
 ## 🛡️ Privacy & Security
 
