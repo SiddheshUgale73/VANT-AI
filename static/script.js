@@ -103,12 +103,24 @@ modelSelect.addEventListener('change', async () => {
             method: 'POST',
             body: formData
         });
+        
         const data = await response.json();
+        
+        if (response.status === 503) {
+            alert("The AI engine is still starting up in the background. Please try switching models again in a few seconds.");
+            // Revert selection visually
+            loadModels(); 
+            return;
+        }
+
         if (data.status === 'success') {
             activeModelBadge.textContent = modelName;
+        } else {
+            alert(data.message || "Failed to switch model.");
         }
     } catch (error) {
         console.error('Model change failed:', error);
+        alert("Failed to communicate with the server.");
     }
 });
 
@@ -320,14 +332,20 @@ async function handleFileUpload(file) {
             method: 'POST',
             body: formData
         });
+        
         const data = await response.json();
+
+        if (response.status === 503) {
+             uploadStatus.innerHTML = `<span style="color: #ffb74d; font-size: 0.75rem;"><i class="fas fa-clock"></i> AI Engine warming up. Try again in a moment.</span>`;
+             return;
+        }
 
         if (data.status === 'success') {
             uploadStatus.innerHTML = `<i class="fas fa-check-circle"></i> Indexed.`;
             addMessage('assistant', marked.parse(`**${file.name}** added to the knowledge base.`));
             loadDocuments();
         } else {
-            uploadStatus.innerHTML = `<span style="color: #ff4d4d; font-size: 0.75rem;">Error: ${data.message}</span>`;
+            uploadStatus.innerHTML = `<span style="color: #ff4d4d; font-size: 0.75rem;">Error: ${data.detail || data.message || 'Processing failed'}</span>`;
         }
     } catch (error) {
         uploadStatus.textContent = 'Upload failed.';

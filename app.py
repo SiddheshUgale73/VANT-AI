@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,16 +25,11 @@ if not GROQ_API_KEY:
 # Initialize SQLite DB
 session_db.init_db()
 
-app = FastAPI(debug=DEBUG)
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # Initialize RAG engine (Lazy load)
 rag_engine: Optional[RAGEngine] = None
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     import threading
     def load_engine():
         global rag_engine
@@ -46,6 +42,12 @@ async def startup_event():
 
     # Run heavy initialization in a separate thread so the server starts instantly
     threading.Thread(target=load_engine, daemon=True).start()
+    yield
+
+app = FastAPI(debug=DEBUG, lifespan=lifespan)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Helper to get rag engine
 def get_rag_engine():
