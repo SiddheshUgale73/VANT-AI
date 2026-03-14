@@ -61,34 +61,19 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 
 1. **Start the FastAPI server**:
    ```bash
-   python main.py
+   uvicorn app:app --host 127.0.0.1 --port 9000
    ```
 
 2. **Open your browser**:
    Navigate to [http://127.0.0.1:9000](http://127.0.0.1:9000)
 
-## 🐳 Docker Deployment
-
-1. **Build the image**:
-   ```bash
-   docker build -t vant-ai .
-   ```
-
-2. **Run the container**:
-   ```bash
-   docker run -p 9000:9000 --env-file .env vant-ai
-   ```
-
 ## 📂 Project Structure
 
-```
+```text
 VANT-AI/
 ├── static/              # Frontend assets (HTML, CSS, JS)
-│   ├── index.html
-│   ├── style.css
-│   └── script.js
 ├── vector_db/           # ChromaDB vector database
-├── main.py              # FastAPI Backend Server (Core)
+├── app.py               # FastAPI Backend Server (Core)
 ├── rag_engine.py        # Core RAG Logic & Hybrid Search
 ├── session_db.py        # SQLite Session Management
 ├── config.py            # Global Settings & Models
@@ -96,7 +81,6 @@ VANT-AI/
 ├── render.yaml          # Render deployment configuration
 ├── Procfile             # Heroku deployment configuration
 ├── .env                 # API Keys (Local Only)
-├── .gitignore           # Ignored files (DBs, logs, etc.)
 ├── chat_history.db      # SQLite database for chat sessions
 └── README.md            # This file
 ```
@@ -108,13 +92,6 @@ VANT-AI/
 3. **Select Model**: Use the top-right selector to choose your preferred AI model.
 4. **Chat & Explore**: Ask questions. Use the "Summarize" button next to uploaded files for a quick overview.
 5. **Citations**: Hover over the source badges in AI responses to see the exact document referenced.
-
-## 🔌 Integration Options
-
-You can integrate the VANT AI "Brain" into your existing websites:
-- **Widget Mode**: Inject a floating chat bubble via a simple JavaScript snippet.
-- **Headless API**: Use the FastAPI endpoints to build your own custom UI in React, Vue, or Next.js.
-- **Cross-Origin Ready**: CORS-enabled for seamless multi-domain deployments.
 
 ## 🛡️ Privacy & Security
 
