@@ -1,4 +1,5 @@
 langchain
+langchain-classic
 langchain-community
 langchain-chroma
 chromadb>=0.4.24

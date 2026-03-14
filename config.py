@@ -17,7 +17,6 @@ AVAILABLE_MODELS = [
     {"name": "Mixtral 8x7B", "id": "mixtral-8x7b-32768"},
     {"name": "Llama 3.2 3B", "id": "llama-3.2-3b-preview"}
 ]
-
 # RAG Configuration
 DB_DIR = "vector_db"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
