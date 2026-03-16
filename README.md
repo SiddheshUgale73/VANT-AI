@@ -21,6 +21,67 @@ VANT AI is a modern, high-performance Retrieval-Augmented Generation (RAG) appli
 - **Retriever**: Hybrid (VectorStore + BM25)
 - **Frontend**: Vanilla HTML5/CSS3 (Glassmorphism), JavaScript (ES6)
 
+## 🏗️ Architecture & Workflow
+
+Here is the complete data flow and system architecture for VANT AI:
+
+```mermaid
+graph TD
+    %% Styling
+    classDef user fill:#6366f1,stroke:#4f46e5,color:#fff,stroke-width:2px;
+    classDef api fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px;
+    classDef engine fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px;
+    classDef db fill:#3b82f6,stroke:#2563eb,color:#fff,stroke-width:2px;
+    classDef llm fill:#ec4899,stroke:#db2777,color:#fff,stroke-width:2px;
+
+    User([User]):::user
+    UI[Frontend UI<br/>HTML/CSS/JS]:::user
+    
+    API[FastAPI Server<br/>app.py]:::api
+    
+    User -->|Uploads Document / Sends Chat| UI
+    UI -->|HTTP Requests| API
+    
+    subgraph Core Backend
+        RAG[RAG Engine<br/>rag_engine.py]:::engine
+        Session[Session Manager<br/>session_db.py]:::engine
+    end
+    
+    API -->|Process Doc / Query| RAG
+    API <-->|Save / Load History| Session
+    
+    subgraph Storage / Databases
+        SQLite[(SQLite<br/>Sessions & Messages)]:::db
+        ChromaDB[(Chroma Local<br/>Document Embeddings)]:::db
+        BM25[BM25 Index<br/>Keyword Mapping]:::db
+    end
+    
+    Session <--> SQLite
+    
+    subgraph AI Retrieval Pipeline
+        Splitter[Text Splitter<br/>RecursiveCharacter]:::engine
+        Embeddings[HuggingFace<br/>all-MiniLM-L6-v2]:::engine
+        HybridSearch{Hybrid Retriever}:::engine
+    end
+    
+    RAG -->|1. Document Ingestion| Splitter
+    Splitter --> Embeddings
+    Embeddings -->|Store Vectors| ChromaDB
+    Splitter -->|Store Keywords| BM25
+    
+    RAG -->|2. Question Answering| HybridSearch
+    HybridSearch -->|Semantic Search| ChromaDB
+    HybridSearch -->|Keyword Search| BM25
+    
+    LLM((Groq API<br/>Llama 3 / Mixtral)):::llm
+    
+    HybridSearch -->|Ranked Context| LLM
+    LLM -->|Generated Response| RAG
+    
+    RAG -->|Return Answer + Citations| API
+    API -->|Display Response| UI
+```
+
 ## 📋 Prerequisites
 
 - Python 3.9+
