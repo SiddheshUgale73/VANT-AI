@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 import os
 import shutil
 import logging
-from typing import List, Optional
+from typing import Optional
 from config import HOST, PORT, DEBUG, GROQ_API_KEY, AVAILABLE_MODELS
 import session_db
 from sqlalchemy.orm import Session

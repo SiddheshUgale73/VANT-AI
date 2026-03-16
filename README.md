@@ -78,8 +78,6 @@ VANT-AI/
 ├── session_db.py        # SQLite Session Management
 ├── config.py            # Global Settings & Models
 ├── requirements.txt     # Python Dependencies
-├── render.yaml          # Render deployment configuration
-├── Procfile             # Heroku deployment configuration
 ├── .env                 # API Keys (Local Only)
 ├── chat_history.db      # SQLite database for chat sessions
 └── README.md            # This file
