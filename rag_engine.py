@@ -63,7 +63,7 @@ class RAGEngine:
             groq_api_key=GROQ_API_KEY
         )
         
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
         self.bm25_retriever = None
         self._initialize_bm25()
         self._create_rag_chain()
@@ -80,7 +80,7 @@ class RAGEngine:
                     metadata=data['metadatas'][i]
                 ))
             self.bm25_retriever = BM25Retriever.from_documents(docs)
-            self.bm25_retriever.k = 5
+            self.bm25_retriever.k = 10
 
     def change_model(self, model_name: str):
         """Switch the underlying LLM model."""
@@ -133,7 +133,7 @@ class RAGEngine:
         self.vectorstore.add_documents(documents=splits)
         
         # Re-initialize retrievers and chain
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
         self._initialize_bm25()
         self._create_rag_chain()
 
@@ -148,7 +148,7 @@ class RAGEngine:
             self.vectorstore.delete(ids=data['ids'])
             
         # Re-initialize retrievers and chain
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
         self._initialize_bm25()
         self._create_rag_chain()
         return True

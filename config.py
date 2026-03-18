@@ -20,8 +20,8 @@ AVAILABLE_MODELS = [
 # RAG Configuration
 DB_DIR = "vector_db"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
 
 # Server Configuration
 HOST = os.getenv("HOST", "127.0.0.1")
