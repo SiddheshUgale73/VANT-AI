@@ -9,6 +9,11 @@ load_dotenv()
 # API Configuration
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+# Security and JWT settings
+SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_vant_ai_key_change_in_production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
 # AI Models
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 AVAILABLE_MODELS = [

@@ -9,7 +9,7 @@ import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain.retrievers import EnsembleRetriever
+from langchain_classic.retrievers import EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 
 from config import GROQ_API_KEY, DEFAULT_MODEL, DB_DIR, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP

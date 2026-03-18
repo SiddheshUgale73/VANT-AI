@@ -15,3 +15,6 @@ pandas
 openpyxl
 rank_bm25
 pydantic>=2.0
+passlib[bcrypt]
+pyjwt
+python-multipart
