@@ -9,38 +9,12 @@ import pandas as pd
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from langchain.retrievers import EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from typing import List, Optional 
+
 from config import GROQ_API_KEY, DEFAULT_MODEL, DB_DIR, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
 
-class HybridRetriever(BaseRetriever):
-    vector_retriever: BaseRetriever
-    bm25_retriever: Optional[BaseRetriever] = None
-    
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ) -> List[Document]:
-        # Get semantic results
-        vector_docs = self.vector_retriever.invoke(query, config={"callbacks": run_manager.get_child()})
-        
-        if not self.bm25_retriever:
-            return vector_docs
-            
-        # Get keyword results
-        bm25_docs = self.bm25_retriever.invoke(query, config={"callbacks": run_manager.get_child()})
-        
-        # Merge and de-duplicate based on content hash or content itself
-        all_docs = vector_docs + bm25_docs
-        seen_content = set()
-        unique_docs = []
-        for doc in all_docs:
-            if doc.page_content not in seen_content:
-                unique_docs.append(doc)
-                seen_content.add(doc.page_content)
-        
-        return unique_docs
+
 
 class RAGEngine:
     def __init__(self):
@@ -197,12 +171,14 @@ class RAGEngine:
             return f"Summarization Error: {str(e)}"
 
     def _create_rag_chain(self):
-        """Setup conversational RAG flow with Hybrid Search (Manual Merge)."""
-        # Initialize our custom hybrid retriever
-        retriever = HybridRetriever(
-            vector_retriever=self.vector_retriever,
-            bm25_retriever=self.bm25_retriever
-        )
+        if self.bm25_retriever:
+            # Use out-of-the-box optimized Ensemble Retriever with RRF
+            retriever = EnsembleRetriever(
+                retrievers=[self.bm25_retriever, self.vector_retriever],
+                weights=[0.3, 0.7] # Prioritize semantic similarity slightly higher
+            )
+        else:
+            retriever = self.vector_retriever
 
         contextualize_q_system_prompt = (
             "Given a chat history and the latest user question "
@@ -223,10 +199,13 @@ class RAGEngine:
         )
 
         system_prompt = (
-            "You are a highly precise AI assistant. Answer questions "
-            "EXCLUSIVELY based on the provided context. If the answer is "
-            "not in the documents, say 'I cannot find this information in "
-            "the current knowledge base.' Use clear Markdown formatting.\n\n"
+            "You are a highly precise, intelligent AI assistant powering VANT AI. "
+            "Analyze the provided context and construct a comprehensive, accurate answer to the user's question.\n\n"
+            "Guidelines:\n"
+            "- Answer EXCLUSIVELY based on the provided context.\n"
+            "- If the answer is not in the context, explicitly state: 'I cannot find this information in the current knowledge base.'\n"
+            "- Structure your answer with clear headings, bullet points, and formatting where appropriate to make it highly readable.\n"
+            "- Synthesize information from across multiple chunks if relevant.\n\n"
             "Context:\n{context}"
         )
         
