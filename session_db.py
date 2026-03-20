@@ -20,7 +20,8 @@ class User(Base):
 class ChatSession(Base):
     __tablename__ = 'sessions'
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey('users.id'), nullable=True) # Temporarily nullable for migration
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+ # Temporarily nullable for migration
     title = Column(String, default="New Chat")
     created_at = Column(DateTime, default=datetime.utcnow)
     
