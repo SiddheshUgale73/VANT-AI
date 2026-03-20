@@ -32,12 +32,24 @@ if (!token) {
 
 function getAuthHeaders(isFormData = false) {
     const headers = {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${localStorage.getItem('vant_token')}`
     };
     if (!isFormData) {
         headers['Content-Type'] = 'application/json';
     }
     return headers;
+}
+
+// Global fetch wrapper for 401 handling
+async function apiCall(url, options = {}) {
+    const response = await fetch(url, options);
+    if (response.status === 401) {
+        localStorage.removeItem('vant_token');
+        localStorage.removeItem('vant_user');
+        window.location.href = '/static/login.html';
+        return;
+    }
+    return response;
 }
 
 // Voice Search (Web Speech API)
@@ -99,7 +111,7 @@ marked.setOptions({
 // Model Management
 async function loadModels() {
     try {
-        const response = await fetch('/models', {
+        const response = await apiCall('/models', {
             headers: getAuthHeaders()
         });
         const data = await response.json();
@@ -127,7 +139,7 @@ modelSelect.addEventListener('change', async () => {
     try {
         const formData = new FormData();
         formData.append('model_id', modelId);
-        const response = await fetch('/models/change', {
+        const response = await apiCall('/models/change', {
             method: 'POST',
             body: formData,
             headers: getAuthHeaders(true)
@@ -163,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Load Indexed Documents
 async function loadDocuments() {
     try {
-        const response = await fetch('/documents', {
+        const response = await apiCall('/documents', {
             headers: getAuthHeaders()
         });
         const data = await response.json();
@@ -191,7 +203,7 @@ async function loadDocuments() {
 
 async function loadSessions() {
     try {
-        const response = await fetch('/sessions', {
+        const response = await apiCall('/sessions', {
             headers: getAuthHeaders()
         });
         const data = await response.json();
@@ -221,7 +233,7 @@ async function loadSessions() {
 
 async function createNewSession() {
     try {
-        const response = await fetch('/sessions', { 
+        const response = await apiCall('/sessions', { 
             method: 'POST',
             headers: getAuthHeaders()
         });
@@ -252,7 +264,7 @@ async function switchSession(id) {
     chatContainer.innerHTML = '<div class="thinking-wrapper"><div class="thinking-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
 
     try {
-        const response = await fetch(`/sessions/${id}/history`, {
+        const response = await apiCall(`/sessions/${id}/history`, {
             headers: getAuthHeaders()
         });
         const data = await response.json();
@@ -280,7 +292,7 @@ async function deleteSession(event, id) {
     if (!confirm('Delete this conversation?')) return;
 
     try {
-        const response = await fetch(`/sessions/${id}`, { 
+        const response = await apiCall(`/sessions/${id}`, { 
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -310,7 +322,7 @@ async function showSummary(filename, element) {
         summaryDiv.style.display = 'block';
 
         try {
-            const response = await fetch(`/summarize/${encodeURIComponent(filename)}`, {
+            const response = await apiCall(`/summarize/${encodeURIComponent(filename)}`, {
                 headers: getAuthHeaders()
             });
             const data = await response.json();
@@ -331,7 +343,7 @@ async function deleteDocument(filename) {
     if (!confirm(`Remove ${filename} from VANT AI?`)) return;
 
     try {
-        const response = await fetch(`/documents/${encodeURIComponent(filename)}`, {
+        const response = await apiCall(`/documents/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
@@ -372,7 +384,7 @@ async function handleFileUpload(file) {
     uploadStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
     try {
-        const response = await fetch('/process', {
+        const response = await apiCall('/process', {
             method: 'POST',
             body: formData,
             headers: getAuthHeaders(true)
@@ -427,7 +439,7 @@ async function sendMessage() {
         formData.append('message', message);
         formData.append('session_id', currentSessionId);
 
-        const response = await fetch('/chat', {
+        const response = await apiCall('/chat', {
             method: 'POST',
             body: formData,
             headers: getAuthHeaders(true)
