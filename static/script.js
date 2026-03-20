@@ -14,6 +14,32 @@ const micBtn = document.getElementById('micBtn');
 let currentSessionId = null;
 let isRecording = false;
 
+// Auth check
+const token = localStorage.getItem('vant_token');
+const username = localStorage.getItem('vant_user');
+if (!token) {
+    window.location.href = '/static/login.html';
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('usernameDisplay').textContent = username || 'User';
+        document.getElementById('logoutBtn').onclick = () => {
+            localStorage.removeItem('vant_token');
+            localStorage.removeItem('vant_user');
+            window.location.href = '/static/login.html';
+        };
+    });
+}
+
+function getAuthHeaders(isFormData = false) {
+    const headers = {
+        'Authorization': `Bearer ${token}`
+    };
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+}
+
 // Voice Search (Web Speech API)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
@@ -73,7 +99,9 @@ marked.setOptions({
 // Model Management
 async function loadModels() {
     try {
-        const response = await fetch('/models');
+        const response = await fetch('/models', {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         modelSelect.innerHTML = '';
         data.models.forEach(model => {
@@ -101,7 +129,8 @@ modelSelect.addEventListener('change', async () => {
         formData.append('model_id', modelId);
         const response = await fetch('/models/change', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: getAuthHeaders(true)
         });
         
         const data = await response.json();
@@ -134,7 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Load Indexed Documents
 async function loadDocuments() {
     try {
-        const response = await fetch('/documents');
+        const response = await fetch('/documents', {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         docList.innerHTML = '';
         if (data.documents && data.documents.length > 0) {
@@ -160,7 +191,9 @@ async function loadDocuments() {
 
 async function loadSessions() {
     try {
-        const response = await fetch('/sessions');
+        const response = await fetch('/sessions', {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         sessionList.innerHTML = '';
 
@@ -188,7 +221,10 @@ async function loadSessions() {
 
 async function createNewSession() {
     try {
-        const response = await fetch('/sessions', { method: 'POST' });
+        const response = await fetch('/sessions', { 
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         if (data.status === 'success') {
             currentSessionId = data.session_id;
@@ -216,7 +252,9 @@ async function switchSession(id) {
     chatContainer.innerHTML = '<div class="thinking-wrapper"><div class="thinking-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
 
     try {
-        const response = await fetch(`/sessions/${id}/history`);
+        const response = await fetch(`/sessions/${id}/history`, {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
 
         chatContainer.innerHTML = '';
@@ -242,7 +280,10 @@ async function deleteSession(event, id) {
     if (!confirm('Delete this conversation?')) return;
 
     try {
-        const response = await fetch(`/sessions/${id}`, { method: 'DELETE' });
+        const response = await fetch(`/sessions/${id}`, { 
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         if (data.status === 'success') {
             if (currentSessionId === id) currentSessionId = null;
@@ -269,7 +310,9 @@ async function showSummary(filename, element) {
         summaryDiv.style.display = 'block';
 
         try {
-            const response = await fetch(`/summarize/${encodeURIComponent(filename)}`);
+            const response = await fetch(`/summarize/${encodeURIComponent(filename)}`, {
+                headers: getAuthHeaders()
+            });
             const data = await response.json();
             if (data.status === 'success') {
                 summaryDiv.innerHTML = marked.parse(data.summary);
@@ -289,7 +332,8 @@ async function deleteDocument(filename) {
 
     try {
         const response = await fetch(`/documents/${encodeURIComponent(filename)}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: getAuthHeaders()
         });
         const data = await response.json();
         if (data.status === 'success') {
@@ -330,7 +374,8 @@ async function handleFileUpload(file) {
     try {
         const response = await fetch('/process', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: getAuthHeaders(true)
         });
         
         const data = await response.json();
@@ -384,7 +429,8 @@ async function sendMessage() {
 
         const response = await fetch('/chat', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: getAuthHeaders(true)
         });
         const data = await response.json();
 
