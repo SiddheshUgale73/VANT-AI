@@ -12,52 +12,55 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 from langchain_classic.retrievers import EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 
+# Externalized Configuration & Prompts
 from config import GROQ_API_KEY, DEFAULT_MODEL, DB_DIR, EMBEDDING_MODEL, CHUNK_SIZE, CHUNK_OVERLAP
-
-
+from prompts import CONTEXTUALIZE_Q_SYSTEM_PROMPT, RAG_SYSTEM_PROMPT, SUMMARIZATION_PROMPT_TEMPLATE
 
 class RAGEngine:
+    """
+    The core AI engine of VANT AI. 
+    Handles document indexing, hybrid search (Vector + BM25), and RAG chain orchestration.
+    """
     def __init__(self):
-        # Local HuggingFace embeddings
+        """Initialize embeddings, vector store, and the Groq LLM client."""
+        # 1. Initialize Local Embeddings (CPU-based)
         self.embeddings = HuggingFaceEmbeddings(
             model_name=EMBEDDING_MODEL,
             model_kwargs={'device': 'cpu'}
         )
         
-        # Load or create persistent vector store
+        # 2. Connect to Persistent ChromaDB
         self.vectorstore = Chroma(
             persist_directory=DB_DIR,
             embedding_function=self.embeddings
         )
         
-        # Groq-powered Chat model
+        # 3. Setup Groq LLM
         self.llm = ChatGroq(
             model_name=DEFAULT_MODEL,
             temperature=0,
             groq_api_key=GROQ_API_KEY
         )
         
+        # 4. Prepare Search & Retrieval Layers
         self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
         self.bm25_retriever = None
         self._initialize_bm25()
         self._create_rag_chain()
 
     def _initialize_bm25(self):
-        """Build BM25 retriever from all documents in vectorstore."""
+        """Prepare the BM25 (Keyword) retriever using current documents in ChromaDB."""
         data = self.vectorstore.get()
         if data and 'documents' in data and data['documents']:
-            # LangChain BM25 expects a list of Document objects
-            docs = []
-            for i in range(len(data['documents'])):
-                docs.append(Document(
-                    page_content=data['documents'][i],
-                    metadata=data['metadatas'][i]
-                ))
+            docs = [
+                Document(page_content=data['documents'][i], metadata=data['metadatas'][i])
+                for i in range(len(data['documents']))
+            ]
             self.bm25_retriever = BM25Retriever.from_documents(docs)
             self.bm25_retriever.k = 10
 
     def change_model(self, model_name: str):
-        """Switch the underlying LLM model."""
+        """Update the LLM model used for inference (e.g., switching from Llama to Mixtral)."""
         self.llm = ChatGroq(
             model_name=model_name,
             temperature=0,
@@ -67,7 +70,10 @@ class RAGEngine:
         return True
 
     def process_document(self, file_path: str):
-        """Load, split, and add document to persistent ChromaDB index."""
+        """
+        Load a file (PDF, DOCX, CSV, XLSX, TXT), split it into chunks, 
+        and add it to the vector database.
+        """
         ext = file_path.lower()
         if ext.endswith('.pdf'):
             loader = PyPDFLoader(file_path)
@@ -79,165 +85,106 @@ class RAGEngine:
             loader = CSVLoader(file_path)
             docs = loader.load()
         elif ext.endswith('.xlsx'):
-            try:
-                df_dict = pd.read_excel(file_path, sheet_name=None)
-                docs = []
-                for sheet_name, df in df_dict.items():
-                    content = df.to_string(index=False)
-                    docs.append(Document(
-                        page_content=content, 
-                        metadata={"source": os.path.basename(file_path), "sheet": sheet_name}
-                    ))
-            except Exception as e:
-                raise Exception(f"Excel Load Error: {str(e)}")
+            docs = self._load_excel_sheets(file_path)
         else:
             loader = TextLoader(file_path)
             docs = loader.load()
-        # Add metadata about the source
+
+        # Add uniform metadata
         for doc in docs:
             doc.metadata["source"] = os.path.basename(file_path)
             
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=CHUNK_SIZE, 
-            chunk_overlap=CHUNK_OVERLAP
-        )
-        splits = text_splitter.split_documents(docs)
+        # Split documents into manageable chunks
+        splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+        self.vectorstore.add_documents(documents=splitter.split_documents(docs))
         
-        # Add to existing vectorstore instead of recreating
-        self.vectorstore.add_documents(documents=splits)
-        
-        # Re-initialize retrievers and chain
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
+        # Refresh the search chain with new data
         self._initialize_bm25()
         self._create_rag_chain()
 
+    def _load_excel_sheets(self, file_path: str):
+        """Helper to process multi-sheet Excel files into documents."""
+        try:
+            df_dict = pd.read_excel(file_path, sheet_name=None)
+            sheets = []
+            for sheet_name, df in df_dict.items():
+                sheets.append(Document(
+                    page_content=df.to_string(index=False), 
+                    metadata={"source": os.path.basename(file_path), "sheet": sheet_name}
+                ))
+            return sheets
+        except Exception as e:
+            raise Exception(f"Excel Processing Error: {str(e)}")
+
     def delete_document(self, filename: str):
-        """Remove all embeddings for a specific document from ChromaDB."""
-        if not self.vectorstore:
-            return
-            
-        # Find all IDs associated with this source
+        """Remove a document's embeddings from the database by its filename."""
+        if not self.vectorstore: return
+        
         data = self.vectorstore.get(where={"source": filename})
         if data and 'ids' in data and data['ids']:
             self.vectorstore.delete(ids=data['ids'])
             
-        # Re-initialize retrievers and chain
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 10})
         self._initialize_bm25()
         self._create_rag_chain()
         return True
 
     def list_documents(self):
-        """Return a list of unique document names currently in the index."""
-        if not self.vectorstore:
-            return []
-        
-        # Get all metadata from the vectorstore
+        """Get the unique names of all indexed documents."""
         data = self.vectorstore.get()
-        if not data or 'metadatas' not in data:
-            return []
-            
-        sources = set()
-        for meta in data['metadatas']:
-            if 'source' in meta:
-                sources.add(meta['source'])
-        return sorted(list(sources))
+        if not data or 'metadatas' not in data: return []
+        return sorted(list(set(m['source'] for m in data['metadatas'] if 'source' in m)))
 
     def summarize_document(self, filename: str):
-        """Generate a 3-bullet summary for a specific document."""
-        if not self.vectorstore:
-            return "No documents indexed."
-            
-        # Get chunks for this document
+        """Generate a 3-bullet summary for a specific document using LLM-based distillation."""
         data = self.vectorstore.get(where={"source": filename})
-        if not data or 'documents' not in data or not data['documents']:
-            return "Document content not found."
+        if not data or not data['documents']: return "Document not found."
             
-        # Combine a reasonable amount of text for summarization (e.g., first 5000 chars)
-        content = "\n".join(data['documents'])
-        limited_content = content[:10000] # Safe limit for context window
-        
-        prompt = (
-            f"Please provide a concise 3-bullet point summary of the following document content. "
-            f"Focus on the main topics and key takeaways.\n\n"
-            f"Content:\n{limited_content}"
-        )
+        content = "\n".join(data['documents'])[:10000] # Cap content to avoid context limits
+        prompt = SUMMARIZATION_PROMPT_TEMPLATE.format(content=content)
         
         try:
-            response = self.llm.invoke(prompt)
-            # Ensure it's in markdown list format
-            return response.content
+            return self.llm.invoke(prompt).content
         except Exception as e:
             return f"Summarization Error: {str(e)}"
 
     def _create_rag_chain(self):
-        if self.bm25_retriever:
-            # Use out-of-the-box optimized Ensemble Retriever with RRF
-            retriever = EnsembleRetriever(
-                retrievers=[self.bm25_retriever, self.vector_retriever],
-                weights=[0.3, 0.7] # Prioritize semantic similarity slightly higher
-            )
-        else:
-            retriever = self.vector_retriever
+        """
+        Orchestrate the LangChain RAG pipeline.
+        Combines history-awareness, hybrid retrieval (Ensemble), and prompt templates.
+        """
+        # 1. Setup Retrieval Layer (Hybrid Search)
+        base_retriever = EnsembleRetriever(
+            retrievers=[self.bm25_retriever, self.vector_retriever],
+            weights=[0.3, 0.7] # 0.7 weight for semantic, 0.3 for keyword
+        ) if self.bm25_retriever else self.vector_retriever
 
-        contextualize_q_system_prompt = (
-            "Given a chat history and the latest user question "
-            "which might reference context in the chat history, "
-            "formulate a standalone question which can be understood "
-            "without the chat history. Do NOT answer the question, "
-            "just reformulate it if needed and otherwise return it as is."
-        )
-        
-        contextualize_q_prompt = ChatPromptTemplate.from_messages([
-            ("system", contextualize_q_system_prompt),
+        # 2. History-Aware Retrieval (Re-formulates query based on context)
+        context_prompt = ChatPromptTemplate.from_messages([
+            ("system", CONTEXTUALIZE_Q_SYSTEM_PROMPT),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ])
-        
-        history_aware_retriever = create_history_aware_retriever(
-            self.llm, retriever, contextualize_q_prompt
-        )
+        h_retriever = create_history_aware_retriever(self.llm, base_retriever, context_prompt)
 
-        system_prompt = (
-            "You are a highly precise, intelligent AI assistant powering VANT AI. "
-            "Analyze the provided context and construct a comprehensive, accurate answer to the user's question.\n\n"
-            "Guidelines:\n"
-            "- Answer EXCLUSIVELY based on the provided context.\n"
-            "- If the answer is not in the context, explicitly state: 'I cannot find this information in the current knowledge base.'\n"
-            "- Structure your answer with clear headings, bullet points, and formatting where appropriate to make it highly readable.\n"
-            "- Synthesize information from across multiple chunks if relevant.\n\n"
-            "Context:\n{context}"
-        )
-        
+        # 3. Dedicated Answer Generation
         qa_prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
+            ("system", RAG_SYSTEM_PROMPT),
             MessagesPlaceholder("chat_history"),
             ("human", "{input}"),
         ])
+        doc_chain = create_stuff_documents_chain(self.llm, qa_prompt)
         
-        question_answer_chain = create_stuff_documents_chain(self.llm, qa_prompt)
-        self.rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+        # 4. Final RAG Chain
+        self.rag_chain = create_retrieval_chain(h_retriever, doc_chain)
 
     def query(self, question: str, chat_history: list = []):
-        """Invoke the full RAG chain and return answer + sources."""
+        """Execute a RAG query and return the answer along with unique sources."""
         if not self.rag_chain:
-            return {"answer": "Engine not initialized.", "sources": []}
+            return {"answer": "AI Engine is initializing...", "sources": []}
         
-        result = self.rag_chain.invoke({
-            "input": question,
-            "chat_history": chat_history
-        })
+        raw_result = self.rag_chain.invoke({"input": question, "chat_history": chat_history})
         
-        sources = []
-        if "context" in result:
-            seen_sources = set()
-            for doc in result["context"]:
-                source_name = doc.metadata.get("source", "Unknown")
-                if source_name not in seen_sources:
-                    sources.append(source_name)
-                    seen_sources.add(source_name)
+        # Extract unique sources from retrieved context chunks
+        sources = sorted(list(set(d.metadata.get("source", "Unknown") for d in raw_result.get("context", []))))
         
-        return {
-            "answer": result["answer"],
-            "sources": sources
-        }
+        return {"answer": raw_result["answer"], "sources": sources}
