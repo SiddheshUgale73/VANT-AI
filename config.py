@@ -20,7 +20,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # Tokens last for 24 hours
 
 # --- 3. LLM MODEL SELECTION ---
 # Users can switch between these models in the UI dashboard.
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "llama-3.1-8b-instant"
 AVAILABLE_MODELS = [
     {"name": "Llama 3.3 70B (High Precision)", "id": "llama-3.3-70b-versatile"},
     {"name": "Llama 3.1 8B (High Speed)", "id": "llama-3.1-8b-instant"},
