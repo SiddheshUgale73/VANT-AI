@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from rag_engine import RAGEngine
 from langchain_core.messages import HumanMessage, AIMessage
-import os  
+import os
 import shutil
 import logging
 from typing import Optional
@@ -183,5 +183,3 @@ async def chat_interaction(message: str = Form(...), session_id: str = Form(...)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host=HOST, port=PORT)
-
-    
