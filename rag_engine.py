@@ -43,7 +43,7 @@ class RAGEngine:
         )
         
         # 4. Prepare Search & Retrieval Layers
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 8, "fetch_k": 20, "lambda_mult": 0.5})
         self.bm25_retriever = None
         self._initialize_bm25()
         self._create_rag_chain()
@@ -57,7 +57,7 @@ class RAGEngine:
                 for i in range(len(data['documents']))
             ]
             self.bm25_retriever = BM25Retriever.from_documents(docs)
-            self.bm25_retriever.k = 5
+            self.bm25_retriever.k = 8
 
     def change_model(self, model_name: str):
         """Update the LLM model used for inference (e.g., switching from Llama to Mixtral)."""

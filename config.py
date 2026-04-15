@@ -31,9 +31,9 @@ AVAILABLE_MODELS = [
 # --- 4. RAG (Retrieval Augmented Generation) SETTINGS ---
 # Controls how documents are indexed and stored.
 DB_DIR = "vector_db"              # Directory for persistent ChromaDB storage
-EMBEDDING_MODEL = "all-MiniLM-L6-v2" # Sentence-transformers model for vectors
-CHUNK_SIZE = 1000                  # Character count per document chunk
-CHUNK_OVERLAP = 200                # Overlap between chunks for context continuity
+EMBEDDING_MODEL = "all-mpnet-base-v2" # Better sentence-transformers model for higher accuracy vectors
+CHUNK_SIZE = 800                  # Character count per document chunk (reduced for better precision)
+CHUNK_OVERLAP = 150                # Overlap between chunks for context continuity
 
 # --- 5. SERVER INFRASTRUCTURE ---
 # Host and Port settings for the FastAPI server.
