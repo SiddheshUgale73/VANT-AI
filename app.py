@@ -17,7 +17,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 # Local Modules
 import session_db
 import auth
-from config import HOST, PORT, DEBUG, GROQ_API_KEY, AVAILABLE_MODELS
+from config import HOST, PORT, DEBUG, AVAILABLE_MODELS
 
 # ---------------------------------------------------------
 # 1. SETUP & INITIALIZATION
@@ -167,7 +167,11 @@ async def chat_interaction(message: str = Form(...), session_id: str = Form(...)
     history = [HumanMessage(content=m.content) if m.role == 'user' else AIMessage(content=m.content) for m in history_records]
     
     # 3. Process with AI Engine
-    result = engine.query(message, history)
+    try:
+        result = engine.query(message, history)
+    except Exception as e:
+        logger.error(f"Chat Engine Error: {str(e)}")
+        return JSONResponse({"status": "error", "message": f"AI Engine failed to process: {str(e)}"}, status_code=500)
     
     # 4. Save interactions to database
     db.add(session_db.ChatMessage(session_id=session_id, role='user', content=message))

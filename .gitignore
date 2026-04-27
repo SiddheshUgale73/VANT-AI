@@ -13,3 +13,4 @@ venv/
 # Databases
 chat_history.db
 vector_db/
+vector_db_*/

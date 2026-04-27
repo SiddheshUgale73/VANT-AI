@@ -30,8 +30,8 @@ AVAILABLE_MODELS = [
 
 # --- 4. RAG (Retrieval Augmented Generation) SETTINGS ---
 # Controls how documents are indexed and stored.
-DB_DIR = "vector_db"              # Directory for persistent ChromaDB storage
-EMBEDDING_MODEL = "all-mpnet-base-v2" # Better sentence-transformers model for higher accuracy vectors
+DB_DIR = "vector_db_fast"              # Directory for persistent ChromaDB storage
+EMBEDDING_MODEL = "all-MiniLM-L6-v2" # Extremely fast sentence-transformers model for CPU
 CHUNK_SIZE = 800                  # Character count per document chunk (reduced for better precision)
 CHUNK_OVERLAP = 150                # Overlap between chunks for context continuity
 

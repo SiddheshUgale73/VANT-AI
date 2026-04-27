@@ -43,7 +43,7 @@ class RAGEngine:
         )
         
         # 4. Prepare Search & Retrieval Layers
-        self.vector_retriever = self.vectorstore.as_retriever(search_kwargs={"k": 8, "fetch_k": 20, "lambda_mult": 0.5})
+        self.vector_retriever = self.vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 8, "fetch_k": 20, "lambda_mult": 0.5})
         self.bm25_retriever = None
         self._initialize_bm25()
         self._create_rag_chain()
@@ -158,15 +158,7 @@ class RAGEngine:
             weights=[0.3, 0.7] # 0.7 weight for semantic, 0.3 for keyword
         ) if self.bm25_retriever else self.vector_retriever
 
-        # 2. History-Aware Retrieval (Re-formulates query based on context)
-        context_prompt = ChatPromptTemplate.from_messages([
-            ("system", CONTEXTUALIZE_Q_SYSTEM_PROMPT),
-            MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
-        ])
-        h_retriever = create_history_aware_retriever(self.llm, base_retriever, context_prompt)
-
-        # 3. Dedicated Answer Generation
+        # 2. Dedicated Answer Generation
         qa_prompt = ChatPromptTemplate.from_messages([
             ("system", RAG_SYSTEM_PROMPT),
             MessagesPlaceholder("chat_history"),
@@ -174,8 +166,8 @@ class RAGEngine:
         ])
         doc_chain = create_stuff_documents_chain(self.llm, qa_prompt)
         
-        # 4. Final RAG Chain
-        self.rag_chain = create_retrieval_chain(h_retriever, doc_chain)
+        # 3. Final RAG Chain (Direct Retrieval to save 1 LLM call)
+        self.rag_chain = create_retrieval_chain(base_retriever, doc_chain)
 
     def query(self, question: str, chat_history: list = []):
         """Execute a RAG query and return the answer along with unique sources."""

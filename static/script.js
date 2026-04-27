@@ -466,7 +466,7 @@ async function sendMessage() {
             // Title might have changed, reload sessions
             loadSessions();
         } else {
-            contentDiv.innerHTML = `<span style="color: #ff4d4d;">Error: ${data.message || 'Processing failed'}</span>`;
+            contentDiv.innerHTML = `<span style="color: #ff4d4d;">Error: ${data.message || data.detail || 'Processing failed'}</span>`;
         }
     } catch (error) {
         const msg = document.getElementById(thinkingId);
